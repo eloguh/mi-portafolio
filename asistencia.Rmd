@@ -19,7 +19,6 @@ library(DT)
 ```
 
 
-
 ```{r}
 
 nombre <- c("PremierLeague", "Championship", "LeagueOne", "LeagueTwo", "National", "LaLiga", "LaLiga2", "PrimeraFedI", "PrimeraFedII", "Bundesliga", "Bundesliga2", "Bundesliga3", "SerieA", "SerieB", "Ligue1", "Ligue2")
