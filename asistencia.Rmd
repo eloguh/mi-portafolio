@@ -1,0 +1,1470 @@
+---
+title: "asistencia principales ligas top países europa "
+output: html_document
+date: "2023-12-03"
+author: "Hugo Toledo Escrivá"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+```
+
+
+```{r}
+library(rvest)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(htmlwidgets)
+library(DT)
+```
+
+
+
+```{r}
+
+nombre <- c("PremierLeague", "Championship", "LeagueOne", "LeagueTwo", "National", "LaLiga", "LaLiga2", "PrimeraFedI", "PrimeraFedII", "Bundesliga", "Bundesliga2", "Bundesliga3", "SerieA", "SerieB", "Ligue1", "Ligue2")
+
+nombre2 <- c("PremierLeague_t", "Championship_t", "LeagueOne_t", "LeagueTwo_t", "National_t","LaLiga_t", "LaLiga2_t", "PrimeraFedI_t", "PrimeraFedII_t", "Bundesliga_t", "Bundesliga2_t", "Bundesliga3_t", "SerieA_t", "SerieB_t", "Ligue1_t", "Ligue2_t")
+
+nombre <- gsub(" ", "", nombre)
+nombre2 <- gsub(" ", "", nombre2)
+
+cat <- c(1,2,3,4,5,1,2,3,3,1,2,3,1,2,1,2)
+
+pais <- c("Inglaterra", "Inglaterra", "Inglaterra", "Inglaterra","Inglaterra", "España", "España", "España", "España", "Alemania", "Alemania", "Alemania", "Italia", "Italia", "Francia", "Francia")
+
+urls_ligas <- c("https://www.transfermarkt.es/premier-league/besucherzahlen/wettbewerb/GB1/saison_id/2023/plus/1", "https://www.transfermarkt.es/championship/besucherzahlen/wettbewerb/GB2/saison_id/2023/plus/1","https://www.transfermarkt.es/league-one/besucherzahlen/wettbewerb/GB3/saison_id/2023/plus/1","https://www.transfermarkt.es/league-two/besucherzahlen/wettbewerb/GB4/saison_id/2023/plus/1","https://www.transfermarkt.es/national-league/besucherzahlen/wettbewerb/CNAT/saison_id/2023/plus/1","https://www.transfermarkt.es/laliga/besucherzahlen/wettbewerb/ES1/saison_id/2023/plus/1","https://www.transfermarkt.es/laliga2/besucherzahlen/wettbewerb/ES2/saison_id/2023/plus/1","https://www.transfermarkt.es/primera-federacion-grupo-i/besucherzahlen/wettbewerb/E3G1/saison_id/2023/plus/1","https://www.transfermarkt.es/primera-federacion-grupo-ii/besucherzahlen/wettbewerb/E3G2/saison_id/2023/plus/1","https://www.transfermarkt.es/bundesliga/besucherzahlen/wettbewerb/L1/saison_id/2023/plus/1","https://www.transfermarkt.es/2-bundesliga/besucherzahlen/wettbewerb/L2/saison_id/2023/plus/1","https://www.transfermarkt.es/3-liga/besucherzahlen/wettbewerb/L3/saison_id/2023/plus/1","https://www.transfermarkt.es/serie-a/besucherzahlen/wettbewerb/IT1/saison_id/2023/plus/1","https://www.transfermarkt.es/serie-b/besucherzahlen/wettbewerb/IT2/saison_id/2023/plus/1","https://www.transfermarkt.es/ligue-1/besucherzahlen/wettbewerb/FR1/saison_id/2023/plus/1","https://www.transfermarkt.es/ligue-2/besucherzahlen/wettbewerb/FR2/saison_id/2023/plus/1"
+
+)
+
+for (i in 1:16) {
+
+#premier
+
+  url <- urls_ligas[i]
+  
+  # Leer la página web
+  webpage <- read_html(url)
+  
+  # Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+  table_data <- html_table(webpage, fill = TRUE)
+  
+  data <- data.frame(table_data[[2]])
+  
+  
+  #--------------------------------------------------------------------
+  
+  stats <- data[2:nrow(data),]
+  
+  s <- seq(1, nrow(stats), by = 3)
+  stats <- stats[s, ]
+  
+  stats <- stats[, 4:ncol(stats)]
+  
+  stats$Partidos <-stats$Partidos*1000
+  stats$lleno <-stats$lleno*1000
+  stats$Máximo.rendimiento <-as.numeric(stats$Máximo.rendimiento)
+  stats$Máximo.rendimiento <-stats$Máximo.rendimiento*1000
+  
+  nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "% media de asistencia")
+  
+  colnames(stats) <- nuevos_nombres
+  
+  rownames(stats) <- NULL
+  
+  stats$cat <- cat[i]
+  stats$pais <- pais[i]
+  
+  stats$`% media de asistencia` <- gsub(" %", "", stats$`% media de asistencia`)
+  stats$`% media de asistencia` <- as.numeric(gsub(",", ".", stats$`% media de asistencia`))  
+  
+  for( j in 1:nrow(stats)){
+    if (stats[j, 8]>100){
+      stats[j,3] <- NA
+      stats[j,8] <- NA
+      
+    }
+    
+    
+  }
+  
+  
+  nuevo_nombre <- nombre[i]
+  assign(nuevo_nombre, stats)
+  
+  
+  #--------------------------------------------------------------------
+  
+  total <- data[1,]
+  total <- total[, c(1,2,3,4,5,6,7,8)]
+  
+  nuevos_nombres <- c("estadio", "equipo", "capacidad(media)", "total", "media", "partidos", "llenos", "% media de asistencia")
+  
+  colnames(total) <- nuevos_nombres
+  
+  total$cat <- cat[i]
+  total$pais <- pais[i]
+  
+  
+  total$`capacidad(media)` <- as.numeric(round(mean(stats$capacidad, na.rm = TRUE)))
+  
+  
+  total <- total[, 3:ncol(total)]
+  
+  liga <- data.frame(nombre[i])
+  total <- cbind(liga, total)
+  colnames(total)[1] <- "liga"
+  
+  nuevo_nombre <- nombre2[i]
+  assign(nuevo_nombre, total)
+  
+ 
+}
+```
+
+
+
+```{r}
+total <- rbind(PremierLeague, LaLiga, SerieA, Bundesliga, Ligue1, Championship, LaLiga2, SerieB, Bundesliga2, Ligue2, LeagueOne, PrimeraFedI, PrimeraFedII, Bundesliga3, LeagueTwo, National)
+
+total_2 <- rbind(PremierLeague_t, LaLiga_t, SerieA_t, Bundesliga_t, Ligue1_t, Championship_t, LaLiga2_t, SerieB_t, Bundesliga2_t, Ligue2_t, LeagueOne_t, PrimeraFedI_t, PrimeraFedII_t, Bundesliga3_t, LeagueTwo_t, National_t)
+
+total_2$total <- gsub("\\.", "", total_2$total)
+total_2$total <- as.numeric(total_2$total)
+
+total_2$media <- gsub("\\.", "", total_2$media)
+total_2$media <- as.numeric(total_2$media)
+
+rownames(total) <- NULL
+```
+
+
+
+
+```{r}
+#graficos
+
+euclidean_distance <- function(x1, y1, x2, y2) {
+  sqrt(1/1000000*(x2 - x1)^2 + (y2 - y1)^2)
+  
+}
+
+
+total_2$liga <- reorder(total_2$liga, -total_2$media)
+
+ggplot(total_2, aes(x = liga, y = media, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Media de espectadores ", x = "Liga", y = "Media_asis") +
+  theme_minimal()
+
+total_2$liga <- reorder(total_2$liga, -total_2$`capacidad(media)`)
+
+ggplot(total_2, aes(x = liga, y =`capacidad(media)`, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Media de capacidad estadios ", x = "Liga", y = "Capacidad") +
+  theme_minimal()
+
+total_2$`% media de asistencia` <- as.numeric(gsub(",", ".", gsub("%", "", total_2$`% media de asistencia`)))
+total_2$liga <- reorder(total_2$liga, -total_2$`% media de asistencia`)
+
+ggplot(total_2, aes(x = liga, y =`% media de asistencia`, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Porcentaje de ocupación estadios", x = "Liga", y = "porcentaje_%") +
+  theme_minimal()
+
+
+ggplot(total_2, aes(x = `% media de asistencia`, y = `capacidad(media)`, label = liga)) +
+  geom_point() +
+  geom_text(aes(label = liga), hjust = 0.5, vjust = 1.5) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad Ligas",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+```
+
+
+```{r}
+distances <- apply(total_2[, c(2, 7)], 1, function(row) {
+  euclidean_distance(41000, 100, row[1], row[2])
+})
+
+
+
+total_2$puntuacion <- round(100000*1/distances, 2)
+
+#logaritmo para mejorar la puntuación:
+
+ggplot(total_2, aes(x = reorder(rownames(total_2), total_2$puntuacion), y = log(log(total_2$puntuacion)))) +
+  geom_point() +
+  labs(x = "Observaciones", y = "Puntuación antes de normalizar") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+normalized_scores <- scale(log(log(total_2$puntuacion)))
+
+# Escalar al rango [0, 5]
+scaled_scores <- 5 * (normalized_scores - min(normalized_scores)) / (max(normalized_scores) - min(normalized_scores))
+
+# Asignar los valores normalizados y escalados a la columna puntuacion
+total_2$puntuacion <- scaled_scores
+
+# Redondear a dos decimales
+total_2$puntuacion <- round(total_2$puntuacion, 2)
+
+
+
+g1 <- ggplot(total_2, aes(x = `% media de asistencia`, y = `capacidad(media)`, text = puntuacion, label = liga)) +
+  geom_point() +
+  geom_text(aes(label = liga), hjust = 0.5, vjust = -0.5, size = 3, nudge_y = 2) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, puntuación sobre 5 estrellas",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g1, tooltip = c("text"))
+```
+
+
+```{r}
+#total$`% media de asistencia` <- as.numeric(gsub(",", ".", gsub("%", "", total$`media_%`)))
+```
+
+
+
+```{r}
+
+euclidean_distance2 <- function(x1, y1, x2, y2) {
+  sqrt(1/4000000*(x2 - x1)^2 + (y2 - y1)^2)
+  
+}
+
+distances <- apply(total[, c(3, 8)], 1, function(row) {
+  euclidean_distance2(82000, 100, row[1], row[2])
+})
+
+
+total$puntuacion <- round(100000/distances, 1)
+
+total <- total[complete.cases(total), ]
+
+nuevos_rownames <- seq_len(nrow(total))
+rownames(total) <- nuevos_rownames
+
+
+normalized_scores <- scale(log(log(total$puntuacion)))
+
+
+# Escalar al rango [0, 5]
+scaled_scores <- 5 * (normalized_scores - min(normalized_scores)) / (max(normalized_scores) - min(normalized_scores))
+
+# Asignar los valores normalizados y escalados a la columna puntuacion
+total$sobre_4 <- scaled_scores
+
+total[62, 12] <- 4
+
+total_ordenado <- total[order(total$sobre_4), ]
+
+# Crear el gráfico de dispersión con la columna ordenada
+plot(total_ordenado$sobre_4, type = "o", main = "Gráfico de Puntuación Ordenada", 
+     xlab = "Observaciones", ylab = "Puntuación depues de normalizar")
+
+```
+
+
+
+```{r}
+ggplot(total, aes(x = `% media de asistencia`, y = capacidad, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = 1.5, size = 2) +
+  labs(title = "Relación entre Ocupación y Capacidad todos los equipos",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+totalf <- filter(total, sobre_4 >2)
+
+
+ggplot(totalf, aes(x = `% media de asistencia`, y = capacidad, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = 1.5, size = 3) +
+  labs(title = "Relación entre Ocupación y Capacidad, nota > 2",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+
+
+
+distances <- apply(totalf[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+totalf$sobre_5 <- paste0(totalf$estadio, ", " ,totalf$sobre_5)
+
+
+
+g2 <- ggplot(totalf, aes(x = `% media de asistencia`, y = capacidad, text = sobre_5, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 3, nudge_y = 2) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, nota > 2",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g2, tooltip = c("text"))
+
+
+total1 <- filter(total, cat == 1)
+
+
+distances <- apply(total1[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+total1$sobre_5 <- paste0(total1$estadio, ", " ,total1$sobre_5)
+
+totalf1 <- filter(total1, `% media de asistencia` > 75)
+totalf1 <- filter(totalf1, capacidad > 40)
+
+g3 <- ggplot(totalf1, aes(x = `% media de asistencia`, y = capacidad, text = sobre_5, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 3, nudge_y = 2) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 1a cat",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g3, tooltip = c("text"))
+
+total2 <- filter(total, cat == 2)
+
+
+distances <- apply(total2[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+
+total2$sobre_5 <- paste0(total2$estadio, ", " ,total2$sobre_5)
+
+
+totalf2 <- filter(total2, `% media de asistencia` > 50)
+totalf2 <- filter(totalf2, capacidad > 30)
+
+g4 <- ggplot(totalf2, aes(x = `% media de asistencia`, y = capacidad, text = sobre_5, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 3, nudge_y = 1) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 2a cat",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g4, tooltip = c("text"))
+
+
+total3 <- filter(total, cat == 3)
+
+
+distances <- apply(total3[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+
+total3$sobre_5 <- paste0(total3$estadio, ", " ,total3$sobre_5)
+
+totalf3 <- filter(total3, `% media de asistencia` > 50)
+totalf3 <- filter(totalf3, capacidad > 20)
+
+g5 <- ggplot(totalf3, aes(x = `% media de asistencia`, y = capacidad, text = sobre_5, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 3, nudge_y = 1) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 3a cat",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g5, tooltip = c("text"))
+
+
+distances <- apply(total[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+```
+
+
+```{r}
+datatable(total)
+```
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------
+
+```{r}
+#championship
+
+url <- "https://www.transfermarkt.es/championship/besucherzahlen/wettbewerb/GB2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 2
+stats$pais <- "inglaterra"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+stats$capacidad <- gsub("\\.", "", stats$capacidad)
+
+nuevo_nombre <- "championship"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 2
+total$pais <- "inglaterra"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Championship")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "championship_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#L1
+
+url <- "https://www.transfermarkt.es/league-one/besucherzahlen/wettbewerb/GB3/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 3
+stats$pais <- "inglaterra"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),1)
+
+stats$capacidad <- as.numeric(gsub("\\.", "", stats$capacidad))
+
+nuevo_nombre <- "league_one"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 3
+total$pais <- "inglaterra"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("League One")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "league_one_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#L2
+
+url <- "https://www.transfermarkt.es/league-two/besucherzahlen/wettbewerb/GB4/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 4
+stats$pais <- "inglaterra"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+# stats$capacidad[18] <- 6.500
+# stats$`media_%`[18] <- "64.3 %"
+
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),1)
+
+stats$capacidad <- as.numeric(gsub("\\.", "", stats$capacidad))
+
+nuevo_nombre <- "league_two"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 4
+total$pais <- "inglaterra"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("League Two")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "league_two_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#National
+
+url <- "https://www.transfermarkt.es/national-league/besucherzahlen/wettbewerb/CNAT/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 5
+stats$pais <- "inglaterra"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),1)
+
+stats$capacidad <- as.numeric(gsub("\\.", "", stats$capacidad))
+
+nuevo_nombre <- "national"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 5
+total$pais <- "inglaterra"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("National")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "national_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#LaLiga
+
+url <- "https://www.transfermarkt.es/laliga/besucherzahlen/wettbewerb/ES1/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 1
+stats$pais <- "españa"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "laliga"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 1
+total$pais <- "españa"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("LaLiga")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "laliga_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#LaLiga2
+
+url <- "https://www.transfermarkt.es/laliga2/besucherzahlen/wettbewerb/ES2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 2
+stats$pais <- "españa"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "laliga2"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 2
+total$pais <- "españa"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("LaLiga2")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "laliga2_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+```{r}
+#1rfef1
+
+url <- "https://www.transfermarkt.es/primera-federacion-grupo-i/besucherzahlen/wettbewerb/E3G1/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 3
+stats$pais <- "españa"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),2)
+
+nuevo_nombre <- "rfef1"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 3
+total$pais <- "españa"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("1rfef_1")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "rfef1_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+```{r}
+#1rfef2
+
+url <- "https://www.transfermarkt.es/primera-federacion-grupo-ii/besucherzahlen/wettbewerb/E3G2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 3
+stats$pais <- "españa"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),2)
+
+nuevo_nombre <- "rfef2"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 3
+total$pais <- "españa"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("1rfef_2")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "rfef2_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+```{r}
+#Serie A
+
+url <- "https://www.transfermarkt.es/serie-a/besucherzahlen/wettbewerb/IT1/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 1
+stats$pais <- "italia"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "serieA"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 1
+total$pais <- "italia"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Serie A")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "serieA_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#Serie B
+
+url <- "https://www.transfermarkt.es/serie-b/besucherzahlen/wettbewerb/IT2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 2
+stats$pais <- "italia"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "serieB"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 2
+total$pais <- "italia"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Serie B")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "serieB_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+```{r}
+#Bundes
+
+url <- "https://www.transfermarkt.es/bundesliga/besucherzahlen/wettbewerb/L1/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 1
+stats$pais <- "alemania"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "bundesliga"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 1
+total$pais <- "alemania"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Bundesliga")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "bundesliga_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#Bundes2
+
+url <- "https://www.transfermarkt.es/2-bundesliga/besucherzahlen/wettbewerb/L2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 2
+stats$pais <- "alemania"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "bundesliga2"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 2
+total$pais <- "alemania"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Bundesliga2")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "bundesliga2_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#Bundes3
+
+url <- "https://www.transfermarkt.es/3-liga/besucherzahlen/wettbewerb/L3/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 3
+stats$pais <- "alemania"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+for (i in 1:nrow(stats)) {
+  if (stats$`media_%`[i] > 100) {
+    stats$capacidad[i] <- stats$capacidad[i] * 2
+  }
+}
+
+# Recalcular capacidad media y porcentaje
+
+stats$`media_%` <- round((((stats$media/1000) / stats$capacidad) * 100),2)
+
+nuevo_nombre <- "bundesliga3"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 3
+total$pais <- "alemania"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Bundesliga3")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "bundesliga3_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+```{r}
+#L1
+
+url <- "https://www.transfermarkt.es/ligue-1/besucherzahlen/wettbewerb/FR1/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 1
+stats$pais <- "francia"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "ligue1"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 1
+total$pais <- "francia"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Ligue 1")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "ligue1_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+```{r}
+#L2
+
+url <- "https://www.transfermarkt.es/ligue-2/besucherzahlen/wettbewerb/FR2/saison_id/2023/plus/1"
+
+# Leer la página web
+webpage <- read_html(url)
+
+# Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+table_data <- html_table(webpage, fill = TRUE)
+
+data <- data.frame(table_data[[2]])
+
+
+#--------------------------------------------------------------------
+
+stats <- data[2:nrow(data),]
+
+s <- seq(1, nrow(stats), by = 3)
+stats <- stats[s, ]
+
+stats <- stats[, 4:ncol(stats)]
+
+nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "media_%")
+
+colnames(stats) <- nuevos_nombres
+
+rownames(stats) <- NULL
+
+stats$cat <- 2
+stats$pais <- "francia"
+
+stats$media <- as.numeric(gsub("\\.", "", stats$media))
+
+nuevo_nombre <- "ligue2"
+assign(nuevo_nombre, stats)
+
+#--------------------------------------------------------------------
+
+total <- data[1,]
+total <- total[, c(1,2,3,4,5,6,7,8)]
+
+colnames(total) <- nuevos_nombres
+
+total$cat <- 2
+total$pais <- "francia"
+
+total$media <- as.numeric(gsub("\\.", "", total$media))
+total$capacidad <- mean(stats$capacidad)
+total$total <- as.numeric(gsub("\\.", "", total$total))
+
+colnames(total)[colnames(total) == "capacidad"] <- "capacidad_media(k)"
+
+total <- total[, 3:ncol(total)]
+
+liga <- data.frame("Ligue 2")
+total <- cbind(liga, total)
+colnames(total)[1] <- "liga"
+
+nuevo_nombre <- "ligue2_t"
+assign(nuevo_nombre, total)
+```
+
+
+
+
+
+
+
+
+
+
+

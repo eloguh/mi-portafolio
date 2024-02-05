@@ -1,0 +1,396 @@
+---
+title: "Estudio sobre la asistencia a estadios en las distintas categorías de los países más potentes de europa "
+output: html_document
+date: "2024-02-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+```
+
+
+```{r}
+library(rvest)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(htmlwidgets)
+library(DT)
+library(ggrepel)
+```
+
+
+
+```{r}
+
+nombre <- c("PremierLeague", "Championship", "LeagueOne", "LeagueTwo", "National", "LaLiga", "LaLiga2", "PrimeraFedI", "PrimeraFedII", "Bundesliga", "Bundesliga2", "Bundesliga3", "SerieA", "SerieB", "Ligue1", "Ligue2")
+
+nombre2 <- c("PremierLeague_t", "Championship_t", "LeagueOne_t", "LeagueTwo_t", "National_t","LaLiga_t", "LaLiga2_t", "PrimeraFedI_t", "PrimeraFedII_t", "Bundesliga_t", "Bundesliga2_t", "Bundesliga3_t", "SerieA_t", "SerieB_t", "Ligue1_t", "Ligue2_t")
+
+nombre <- gsub(" ", "", nombre)
+nombre2 <- gsub(" ", "", nombre2)
+
+cat <- c(1,2,3,4,5,1,2,3,3,1,2,3,1,2,1,2)
+
+pais <- c("Inglaterra", "Inglaterra", "Inglaterra", "Inglaterra","Inglaterra", "España", "España", "España", "España", "Alemania", "Alemania", "Alemania", "Italia", "Italia", "Francia", "Francia")
+
+urls_ligas <- c("https://www.transfermarkt.es/premier-league/besucherzahlen/wettbewerb/GB1/saison_id/2023/plus/1", "https://www.transfermarkt.es/championship/besucherzahlen/wettbewerb/GB2/saison_id/2023/plus/1","https://www.transfermarkt.es/league-one/besucherzahlen/wettbewerb/GB3/saison_id/2023/plus/1","https://www.transfermarkt.es/league-two/besucherzahlen/wettbewerb/GB4/saison_id/2023/plus/1","https://www.transfermarkt.es/national-league/besucherzahlen/wettbewerb/CNAT/saison_id/2023/plus/1","https://www.transfermarkt.es/laliga/besucherzahlen/wettbewerb/ES1/saison_id/2023/plus/1","https://www.transfermarkt.es/laliga2/besucherzahlen/wettbewerb/ES2/saison_id/2023/plus/1","https://www.transfermarkt.es/primera-federacion-grupo-i/besucherzahlen/wettbewerb/E3G1/saison_id/2023/plus/1","https://www.transfermarkt.es/primera-federacion-grupo-ii/besucherzahlen/wettbewerb/E3G2/saison_id/2023/plus/1","https://www.transfermarkt.es/bundesliga/besucherzahlen/wettbewerb/L1/saison_id/2023/plus/1","https://www.transfermarkt.es/2-bundesliga/besucherzahlen/wettbewerb/L2/saison_id/2023/plus/1","https://www.transfermarkt.es/3-liga/besucherzahlen/wettbewerb/L3/saison_id/2023/plus/1","https://www.transfermarkt.es/serie-a/besucherzahlen/wettbewerb/IT1/saison_id/2023/plus/1","https://www.transfermarkt.es/serie-b/besucherzahlen/wettbewerb/IT2/saison_id/2023/plus/1","https://www.transfermarkt.es/ligue-1/besucherzahlen/wettbewerb/FR1/saison_id/2023/plus/1","https://www.transfermarkt.es/ligue-2/besucherzahlen/wettbewerb/FR2/saison_id/2023/plus/1"
+
+)
+
+for (i in 1:16) {
+
+#premier
+
+  url <- urls_ligas[i]
+  
+  # Leer la página web
+  webpage <- read_html(url)
+  
+  # Extraer la tabla por su etiqueta HTML (por ejemplo, "table")
+  table_data <- html_table(webpage, fill = TRUE)
+  
+  data <- data.frame(table_data[[2]])
+  
+  
+  #--------------------------------------------------------------------
+  
+  stats <- data[2:nrow(data),]
+  
+  s <- seq(1, nrow(stats), by = 3)
+  stats <- stats[s, ]
+  
+  stats <- stats[, 4:ncol(stats)]
+  
+  stats$Partidos <-stats$Partidos*1000
+  stats$lleno <-stats$lleno*1000
+  stats$Máximo.rendimiento <-as.numeric(stats$Máximo.rendimiento)
+  stats$Máximo.rendimiento <-stats$Máximo.rendimiento*1000
+  
+  nuevos_nombres <- c("estadio", "equipo", "capacidad", "total", "media", "partidos", "llenos", "% media de asistencia")
+  
+  colnames(stats) <- nuevos_nombres
+  
+  rownames(stats) <- NULL
+  
+  stats$cat <- cat[i]
+  stats$pais <- pais[i]
+  
+  stats$`% media de asistencia` <- gsub(" %", "", stats$`% media de asistencia`)
+  stats$`% media de asistencia` <- as.numeric(gsub(",", ".", stats$`% media de asistencia`))  
+  
+  for( j in 1:nrow(stats)){
+    if (stats[j, 8]>100){
+      stats[j,3] <- NA
+      stats[j,8] <- NA
+      
+    }
+    
+    
+  }
+  
+  
+  nuevo_nombre <- nombre[i]
+  assign(nuevo_nombre, stats)
+  
+  
+  #--------------------------------------------------------------------
+  
+  total <- data[1,]
+  total <- total[, c(1,2,3,4,5,6,7,8)]
+  
+  nuevos_nombres <- c("estadio", "equipo", "capacidad(media)", "total", "media", "partidos", "llenos", "% media de asistencia")
+  
+  colnames(total) <- nuevos_nombres
+  
+  total$cat <- cat[i]
+  total$pais <- pais[i]
+  
+  
+  total$`capacidad(media)` <- as.numeric(round(mean(stats$capacidad, na.rm = TRUE)))
+  
+  
+  total <- total[, 3:ncol(total)]
+  
+  liga <- data.frame(nombre[i])
+  total <- cbind(liga, total)
+  colnames(total)[1] <- "liga"
+  
+  nuevo_nombre <- nombre2[i]
+  assign(nuevo_nombre, total)
+  
+ 
+}
+```
+
+
+
+```{r}
+total <- rbind(PremierLeague, LaLiga, SerieA, Bundesliga, Ligue1, Championship, LaLiga2, SerieB, Bundesliga2, Ligue2, LeagueOne, PrimeraFedI, PrimeraFedII, Bundesliga3, LeagueTwo, National)
+
+total_2 <- rbind(PremierLeague_t, LaLiga_t, SerieA_t, Bundesliga_t, Ligue1_t, Championship_t, LaLiga2_t, SerieB_t, Bundesliga2_t, Ligue2_t, LeagueOne_t, PrimeraFedI_t, PrimeraFedII_t, Bundesliga3_t, LeagueTwo_t, National_t)
+
+total_2$total <- gsub("\\.", "", total_2$total)
+total_2$total <- as.numeric(total_2$total)
+
+total_2$media <- gsub("\\.", "", total_2$media)
+total_2$media <- as.numeric(total_2$media)
+
+rownames(total) <- NULL
+```
+
+
+
+
+```{r}
+#graficos
+
+euclidean_distance <- function(x1, y1, x2, y2) {
+  sqrt(1/1000000*(x2 - x1)^2 + (y2 - y1)^2)
+  
+}
+
+
+total_2$liga <- reorder(total_2$liga, -total_2$media)
+
+ggplot(total_2, aes(x = liga, y = media, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Media de espectadores ", x = "Liga", y = "Media_asis") +
+  theme_minimal()
+
+total_2$liga <- reorder(total_2$liga, -total_2$`capacidad(media)`)
+
+ggplot(total_2, aes(x = liga, y =`capacidad(media)`, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Media de capacidad estadios ", x = "Liga", y = "Capacidad") +
+  theme_minimal()
+
+total_2$`% media de asistencia` <- as.numeric(gsub(",", ".", gsub("%", "", total_2$`% media de asistencia`)))
+total_2$liga <- reorder(total_2$liga, -total_2$`% media de asistencia`)
+
+ggplot(total_2, aes(x = liga, y =`% media de asistencia`, fill = liga)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Porcentaje de ocupación estadios", x = "Liga", y = "porcentaje_%") +
+  theme_minimal()
+
+
+ggplot(total_2, aes(x = `% media de asistencia`, y = `capacidad(media)`, label = liga)) +
+  geom_point() +
+  geom_text_repel(hjust = 0.5, box.padding = 0.5, point.padding = 0.5) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad Ligas",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+```
+
+
+```{r}
+distances <- apply(total_2[, c(2, 7)], 1, function(row) {
+  euclidean_distance(41000, 100, row[1], row[2])
+})
+
+
+
+total_2$puntuacion <- round(100000*1/distances, 2)
+
+#logaritmo para mejorar la puntuación:
+
+ggplot(total_2, aes(x = reorder(rownames(total_2), total_2$puntuacion), y = log(log(total_2$puntuacion)))) +
+  geom_point() +
+  labs(x = "Observaciones", y = "Puntuación con transformación doble logaritmo") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+normalized_scores <- scale(log(log(total_2$puntuacion)))
+
+# Escalar al rango [0, 5]
+scaled_scores <- 5 * (normalized_scores - min(normalized_scores)) / (max(normalized_scores) - min(normalized_scores))
+
+# Asignar los valores normalizados y escalados a la columna puntuacion
+total_2$puntuacion <- scaled_scores
+
+# Redondear a dos decimales
+total_2$puntuacion <- round(total_2$puntuacion, 2)
+
+
+
+g1 <- ggplot(total_2, aes(x = `% media de asistencia`, y = `capacidad(media)`, 
+                          text = paste("Puntuación: <b>", puntuacion, "</b><br>Liga: <b>", liga, "</b>"),
+                          label = liga)) +
+  geom_point() +
+  labs(title = "Relación entre Ocupación y Capacidad, puntuación sobre 5 estrellas",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g1, tooltip = "text")
+```
+
+
+```{r}
+#total$`% media de asistencia` <- as.numeric(gsub(",", ".", gsub("%", "", total$`media_%`)))
+```
+
+
+
+```{r}
+
+euclidean_distance2 <- function(x1, y1, x2, y2) {
+  sqrt(1/4000000*(x2 - x1)^2 + (y2 - y1)^2)
+  
+}
+
+distances <- apply(total[, c(3, 8)], 1, function(row) {
+  euclidean_distance2(82000, 100, row[1], row[2])
+})
+
+
+total$puntuacion <- round(100000/distances, 1)
+
+total <- total[complete.cases(total), ]
+
+nuevos_rownames <- seq_len(nrow(total))
+rownames(total) <- nuevos_rownames
+
+
+normalized_scores <- scale(log(log(total$puntuacion)))
+
+
+# Escalar al rango [0, 5]
+scaled_scores <- 5 * (normalized_scores - min(normalized_scores)) / (max(normalized_scores) - min(normalized_scores))
+
+# Asignar los valores normalizados y escalados a la columna puntuacion
+total$sobre_4 <- round(scaled_scores, 2)
+
+total[62, 12] <- 4
+
+
+total_ordenado <- total[order(total$sobre_4), ]
+
+# Crear el gráfico de dispersión con la columna ordenada
+plot(total_ordenado$sobre_4, type = "o", main = "Puntuación Ordenada tras normalizar entre 0 y 4 para estadios", 
+     xlab = "Observaciones", ylab = "Puntuación depues de normalizar")
+
+```
+
+
+
+```{r}
+ggplot(total, aes(x = `% media de asistencia`, y = capacidad, label = equipo)) +
+  geom_point() +
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = 1.5, size = 2) +
+  labs(title = "Relación entre Ocupación y Capacidad todos los equipos",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+totalf <- filter(total, sobre_4 >2)
+
+
+ggplot(totalf, aes(x = `% media de asistencia`, y = capacidad, label = equipo)) +
+  geom_point() +
+  geom_text_repel(hjust = 0.5, box.padding = 0.5, point.padding = 0.5) +
+  labs(title = "Relación entre Ocupación y Capacidad, nota > 2, sobre 4",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+
+
+
+distances <- apply(totalf[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+options(repr.plot.width = 10, repr.plot.height = 6)
+
+
+g2 <- ggplot(totalf, aes(x = `% media de asistencia`, y = capacidad, text = paste("Puntuación: <b>", sobre_4, "</b><br>Estadio: <b>", estadio, "</b>"), label = equipo)) +
+
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 2, nudge_y = 2) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, nota > 2",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g2, tooltip = c("text"))
+
+
+total1 <- filter(total, cat == 1)
+
+
+distances <- apply(total1[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+total1$sobre_5 <- paste0(total1$estadio, ", " ,total1$sobre_5)
+
+totalf1 <- total1 %>%
+  arrange(desc(puntuacion)) %>%  # Ordenar por puntuación de forma descendente
+  filter(row_number(desc(puntuacion)) <= round(0.1 * n()))
+
+g3 <- ggplot(totalf1, aes(x = `% media de asistencia`, y = capacidad, text = paste("Puntuación: <b>", sobre_4, "</b><br>Estadio: <b>", estadio, "</b>"), label = equipo)) +
+
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 2, nudge_y = 2) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 1a cat, top 10%",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g3, tooltip = c("text"))
+
+total2 <- filter(total, cat == 2)
+
+
+distances <- apply(total2[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+
+totalf2 <- total2 %>%
+  arrange(desc(puntuacion)) %>%  # Ordenar por puntuación de forma descendente
+  filter(row_number(desc(puntuacion)) <= round(0.1 * n()))
+
+g4 <- ggplot(totalf2, aes(x = `% media de asistencia`, y = capacidad, text = paste("Puntuación: <b>", sobre_4, "</b><br>Estadio: <b>", estadio, "</b>"), label = equipo)) +
+
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 2, nudge_y = 1) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 2a cat, top 10%",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g4, tooltip = c("text"))
+
+
+total3 <- filter(total, cat == 3)
+
+
+distances <- apply(total3[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+
+totalf3 <- total3 %>%
+  arrange(desc(puntuacion)) %>%  # Ordenar por puntuación de forma descendente
+  filter(row_number(desc(puntuacion)) <= round(0.1 * n()))
+
+g5 <- ggplot(totalf3, aes(x = `% media de asistencia`, y = capacidad, text = paste("Puntuación: <b>", sobre_4, "</b><br>Estadio: <b>", estadio, "</b>"), label = equipo)) +
+
+  geom_text(aes(label = equipo), hjust = 0.5, vjust = -0.5, size = 2, nudge_y = 1) +  # Etiquetas con nombres de estadios
+  labs(title = "Relación entre Ocupación y Capacidad, 3a cat, top 10%",
+       x = "Ocupación del Estadio (%)",
+       y = "Capacidad del Estadio") +
+  theme_minimal()
+
+ggplotly(g5, tooltip = c("text"))
+
+
+distances <- apply(total[, c(3, 8)], 1, function(row) {
+  euclidean_distance(82, 200, row[1], 2*row[2])
+})
+```
+
+
+```{r}
+datatable(total)
+```
